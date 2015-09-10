@@ -24,5 +24,7 @@ LOCAL_SRC_FILES := \
     libcap/cap_text.c
 
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/libcap/include
+
+LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)/libcap/include
 LOCAL_MODULE := libcap
 include $(BUILD_SHARED_LIBRARY)
