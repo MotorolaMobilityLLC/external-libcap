@@ -14,8 +14,7 @@
 
 LOCAL_PATH:= $(call my-dir)
 
-include $(CLEAR_VARS)
-LOCAL_SRC_FILES := \
+libcap_src_files := \
     libcap/cap_alloc.c \
     libcap/cap_extint.c \
     libcap/cap_file.c \
@@ -23,8 +22,26 @@ LOCAL_SRC_FILES := \
     libcap/cap_proc.c \
     libcap/cap_text.c
 
+
+# Shared library.
+include $(CLEAR_VARS)
+LOCAL_SRC_FILES := $(libcap_src_files)
+
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/libcap/include
 
 LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)/libcap/include
 LOCAL_MODULE := libcap
 include $(BUILD_SHARED_LIBRARY)
+
+
+# Static library.
+include $(CLEAR_VARS)
+LOCAL_SRC_FILES := $(libcap_src_files)
+
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/libcap/include
+
+LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)/libcap/include
+LOCAL_MODULE := libcap
+include $(BUILD_STATIC_LIBRARY)
+
+libcap_src_files :=
