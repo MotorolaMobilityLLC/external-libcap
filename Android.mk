@@ -23,8 +23,12 @@ libcap_src_files := \
     libcap/cap_text.c
 
 
+libcap_cflags := -Wno-unused-parameter -Wno-tautological-compare
+
 # Shared library.
 include $(CLEAR_VARS)
+LOCAL_CLANG := true
+LOCAL_CFLAGS := $(libcap_cflags)
 LOCAL_SRC_FILES := $(libcap_src_files)
 
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/libcap/include
@@ -36,6 +40,8 @@ include $(BUILD_SHARED_LIBRARY)
 
 # Static library.
 include $(CLEAR_VARS)
+LOCAL_CLANG := true
+LOCAL_CFLAGS := $(libcap_cflags)
 LOCAL_SRC_FILES := $(libcap_src_files)
 
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/libcap/include
