@@ -48,6 +48,9 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/libcap/include
 
 LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)/libcap/include
 LOCAL_MODULE := libcap
+
+LOCAL_COMPATIBILITY_SUITE := vts
+
 include $(BUILD_STATIC_LIBRARY)
 
 libcap_src_files :=
