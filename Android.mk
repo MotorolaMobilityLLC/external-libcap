@@ -38,7 +38,7 @@ LOCAL_MODULE := libcap
 
 LOCAL_COMPATIBILITY_SUITE := vts
 include $(BUILD_SHARED_LIBRARY)
-
+-include test/vts/tools/build/Android.packaging_sharedlib.mk
 
 # Static library.
 include $(CLEAR_VARS)
