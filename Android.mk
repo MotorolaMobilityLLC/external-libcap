@@ -40,6 +40,19 @@ LOCAL_COMPATIBILITY_SUITE := vts
 include $(BUILD_SHARED_LIBRARY)
 -include test/vts/tools/build/Android.packaging_sharedlib.mk
 
+# Shared library for host.
+include $(CLEAR_VARS)
+LOCAL_CLANG := true
+LOCAL_CFLAGS := $(libcap_cflags)
+LOCAL_SRC_FILES := $(libcap_src_files)
+
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/libcap/include
+
+LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)/libcap/include
+LOCAL_MODULE := libcap
+include $(BUILD_HOST_SHARED_LIBRARY)
+
+
 # Static library.
 include $(CLEAR_VARS)
 LOCAL_CLANG := true
