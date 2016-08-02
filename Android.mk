@@ -48,6 +48,7 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/libcap/include
 
 LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)/libcap/include
 LOCAL_MODULE := libcap
+LOCAL_MODULE_HOST_OS := linux
 include $(BUILD_HOST_SHARED_LIBRARY)
 
 
