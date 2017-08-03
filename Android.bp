@@ -17,6 +17,9 @@ cc_library {
     clang: true,
     host_supported: true,
     vendor_available: true,
+    vndk: {
+        enabled: true,
+    },
 
     cflags: [
         "-Wno-unused-parameter",
