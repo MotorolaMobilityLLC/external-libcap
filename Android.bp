@@ -12,6 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+cc_defaults {
+    name: "libcap_defaults",
+    cflags: [
+        "-Wall",
+        "-Werror",
+        "-Wno-unused-parameter",
+        "-Wno-unused-result",
+        "-Wno-tautological-compare",
+    ],
+}
+
 cc_library {
     name: "libcap",
     host_supported: true,
@@ -19,11 +30,7 @@ cc_library {
     vndk: {
         enabled: true,
     },
-
-    cflags: [
-        "-Wno-unused-parameter",
-        "-Wno-tautological-compare",
-    ],
+    defaults: ["libcap_defaults"],
 
     srcs: [
         "libcap/cap_alloc.c",
@@ -52,10 +59,7 @@ cc_binary {
 
     srcs: ["progs/getcap.c"],
 
-    cflags: [
-        "-Wno-unused-parameter",
-        "-Wno-tautological-compare",
-    ],
+    defaults: ["libcap_defaults"],
 
     static_libs: [
         "libcap",
@@ -67,10 +71,7 @@ cc_binary {
 
     srcs: ["progs/setcap.c"],
 
-    cflags: [
-        "-Wno-unused-parameter",
-        "-Wno-tautological-compare",
-    ],
+    defaults: ["libcap_defaults"],
 
     static_libs: [
         "libcap",
