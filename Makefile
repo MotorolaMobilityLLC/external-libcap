@@ -13,6 +13,10 @@ all install clean kdebug: %: %-here
 ifneq ($(PAM_CAP),no)
 	$(MAKE) -C pam_cap $@
 endif
+ifeq ($(GOLANG),yes)
+	$(MAKE) -C go $@
+endif
+	$(MAKE) -C tests $@
 	$(MAKE) -C progs $@
 	$(MAKE) -C doc $@
 	$(MAKE) -C kdebug $@
@@ -28,11 +32,33 @@ distclean: clean
 	$(DISTCLEAN)
 
 release: distclean
-	cd .. && ln -s libcap libcap-$(VERSION).$(MINOR) && tar cvf libcap-$(VERSION).$(MINOR).tar libcap-$(VERSION).$(MINOR)/* && rm libcap-$(VERSION).$(MINOR)
-	cd .. && gpg -sba -u E2CCF3F4 libcap-$(VERSION).$(MINOR).tar
+	cd .. && ln -s libcap libcap-$(VERSION).$(MINOR) && tar cvf libcap-$(VERSION).$(MINOR).tar --exclude patches libcap-$(VERSION).$(MINOR)/* && rm libcap-$(VERSION).$(MINOR)
 
-tagrelease: distclean
+test: all
+	make -C libcap $@
+	make -C tests $@
+ifneq ($(PAM_CAP),no)
+	$(MAKE) -C pam_cap $@
+endif
+ifeq ($(GOLANG),yes)
+	make -C go $@
+endif
+	make -C progs $@
+
+sudotest: all
+	make -C tests $@
+ifneq ($(PAM_CAP),no)
+	$(MAKE) -C pam_cap $@
+endif
+ifeq ($(GOLANG),yes)
+	make -C go $@
+endif
+	make -C progs $@
+
+morganrelease: distclean
 	@echo "sign the tag twice: older DSA key; and newer RSA kernel.org key"
-	git tag -u D41A6DF2 -s libcap-$(VERSION).$(MINOR)
-	git tag -u E2CCF3F4 -s libcap-korg-$(VERSION).$(MINOR)
+	git tag -u D41A6DF2 -s libcap-$(VERSION).$(MINOR) -m "This is libcap-$(VERSION).$(MINOR)"
+	git tag -u E2CCF3F4 -s libcap-korg-$(VERSION).$(MINOR) -m "This is libcap-$(VERSION).$(MINOR)"
 	make release
+	@echo "sign the tar file using korg key"
+	cd .. && gpg -sba -u E2CCF3F4 libcap-$(VERSION).$(MINOR).tar
