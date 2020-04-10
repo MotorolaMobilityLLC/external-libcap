@@ -52,6 +52,9 @@ cc_library {
         linux_bionic: {
             enabled: true,
         },
+        linux_glibc: {
+            local_include_dirs: ["libcap/include/uapi"],
+        },
     },
 }
 
