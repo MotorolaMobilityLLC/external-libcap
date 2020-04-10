@@ -1,9 +1,11 @@
 /*
  * DO NOT EDIT: this file is generated automatically from
  *
- *     <linux/capability.h>
+ *     <uapi/linux/capability.h>
  */
-#define __CAP_BITS   37
+
+#define __CAP_BITS       38
+#define __CAP_NAME_SIZE  21
 
 #ifdef LIBCAP_PLEASE_INCLUDE_ARRAY
   char const *_cap_names[__CAP_BITS] = {
@@ -44,6 +46,7 @@
       /* 34 */	"cap_syslog",
       /* 35 */	"cap_wake_alarm",
       /* 36 */	"cap_block_suspend",
+      /* 37 */	"cap_audit_read",
   };
 #endif /* LIBCAP_PLEASE_INCLUDE_ARRAY */
 

@@ -7,6 +7,7 @@
  *
  * See here for the libcap library ("POSIX draft" compliance):
  *
+ * https://git.kernel.org/pub/scm/libs/libcap/libcap.git/refs/
  * http://www.kernel.org/pub/linux/libs/security/linux-privs/
  */
 
@@ -14,8 +15,6 @@
 #define _UAPI_LINUX_CAPABILITY_H
 
 #include <linux/types.h>
-
-struct task_struct;
 
 /* User-level do most of the mapping between kernel and user
    capabilities based on the version tag given by the kernel. The
@@ -40,13 +39,13 @@ struct task_struct;
 typedef struct __user_cap_header_struct {
 	__u32 version;
 	int pid;
-} __user *cap_user_header_t;
+} *cap_user_header_t;
 
 typedef struct __user_cap_data_struct {
         __u32 effective;
         __u32 permitted;
         __u32 inheritable;
-} __user *cap_user_data_t;
+} *cap_user_data_t;
 
 
 #define VFS_CAP_REVISION_MASK	0xFF000000
@@ -62,16 +61,32 @@ typedef struct __user_cap_data_struct {
 #define VFS_CAP_U32_2           2
 #define XATTR_CAPS_SZ_2         (sizeof(__le32)*(1 + 2*VFS_CAP_U32_2))
 
+#define VFS_CAP_REVISION_3	0x03000000
+#define VFS_CAP_U32_3           VFS_CAP_U32_2
+#define XATTR_CAPS_SZ_3         (sizeof(__le32)+XATTR_CAPS_SZ_2)
+
+/*
+ * Kernel capabilities default to v2. The v3 VFS caps are only used,
+ * at present, for namespace specific filesystem capabilities.
+ */
 #define XATTR_CAPS_SZ           XATTR_CAPS_SZ_2
 #define VFS_CAP_U32             VFS_CAP_U32_2
 #define VFS_CAP_REVISION	VFS_CAP_REVISION_2
 
+#define _VFS_CAP_DATA_HEAD \
+	__le32 magic_etc;            /* Little endian */ \
+	struct {                                         \
+		__le32 permitted;    /* Little endian */ \
+		__le32 inheritable;  /* Little endian */ \
+	} data[VFS_CAP_U32]
+
 struct vfs_cap_data {
-	__le32 magic_etc;            /* Little endian */
-	struct {
-		__le32 permitted;    /* Little endian */
-		__le32 inheritable;  /* Little endian */
-	} data[VFS_CAP_U32];
+	_VFS_CAP_DATA_HEAD;
+};
+
+struct vfs_ns_cap_data {
+	_VFS_CAP_DATA_HEAD;
+	__le32 rootid;
 };
 
 #ifndef __KERNEL__
@@ -207,7 +222,7 @@ struct vfs_cap_data {
 #define CAP_SYS_MODULE       16
 
 /* Allow ioperm/iopl access */
-/* Allow sending USB messages to any device via /proc/bus/usb */
+/* Allow sending USB messages to any device via /dev/bus/usb */
 
 #define CAP_SYS_RAWIO        17
 
@@ -361,7 +376,7 @@ struct vfs_cap_data {
  */
 
 #define CAP_TO_INDEX(x)     ((x) >> 5)        /* 1 << 5 == bits in __u32 */
-#define CAP_TO_MASK(x)      (1 << ((x) & 31)) /* mask for indexed __u32 */
+#define CAP_TO_MASK(x)      (1u << ((x) & 31)) /* mask for indexed __u32 */
 
 
 #endif /* _UAPI_LINUX_CAPABILITY_H */
