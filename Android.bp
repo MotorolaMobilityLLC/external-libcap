@@ -53,6 +53,11 @@ cc_library {
             enabled: true,
         },
     },
+    apex_available: [
+       "//apex_available:platform",
+       "com.android.adbd",
+       "com.android.media.swcodec",
+    ],
 }
 
 cc_binary {
