@@ -6,6 +6,7 @@ third_party {
     value: "https://git.kernel.org/pub/scm/linux/kernel/git/morgan/libcap.git"
   }
   version: "libcap-2.33"
+  license_type: NOTICE
   last_upgrade_date {
     year: 2020
     month: 4
