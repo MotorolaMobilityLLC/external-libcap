@@ -5,12 +5,11 @@
 // POSIX semantics system calls that manipulate process state.
 //
 // If the Go runtime syscall interface contains the
-// syscall.PerOSThreadSyscall() API then then this package will use
-// that to invoke capability setting system calls for pure Go
-// binaries. To force this behavior use the CGO_ENABLED=0 environment
-// variable.
+// syscall.AllThreadsSyscall() API then this package will use that to
+// invoke capability setting system calls for pure Go binaries. To
+// force this behavior use the CGO_ENABLED=0 environment variable.
 //
-// If syscall.PerOSThreadSyscall() is not present, the "libcap/cap"
+// If syscall.AllThreadsSyscall() is not present, the "libcap/cap"
 // package will failover to using "libcap/psx".
 package cap
 
@@ -104,7 +103,7 @@ type syscaller struct {
 
 // caprcall provides a pointer etc wrapper for the system calls
 // associated with getcap.
-//go:nosplit
+//go:uintptrescapes
 func (sc *syscaller) caprcall(call uintptr, h *header, d []data) error {
 	x := uintptr(0)
 	if d != nil {
@@ -119,7 +118,7 @@ func (sc *syscaller) caprcall(call uintptr, h *header, d []data) error {
 
 // capwcall provides a pointer etc wrapper for the system calls
 // associated with setcap.
-//go:nosplit
+//go:uintptrescapes
 func (sc *syscaller) capwcall(call uintptr, h *header, d []data) error {
 	x := uintptr(0)
 	if d != nil {
@@ -135,7 +134,6 @@ func (sc *syscaller) capwcall(call uintptr, h *header, d []data) error {
 // prctlrcall provides a wrapper for the prctl systemcalls that only
 // read kernel state. There is a limited number of arguments needed
 // and the caller should use 0 for those not needed.
-//go:nosplit
 func (sc *syscaller) prctlrcall(prVal, v1, v2 uintptr) (int, error) {
 	r, _, err := sc.r3(syscall.SYS_PRCTL, prVal, v1, v2)
 	if err != 0 {
@@ -148,7 +146,6 @@ func (sc *syscaller) prctlrcall(prVal, v1, v2 uintptr) (int, error) {
 // read kernel state and require 6 arguments - ambient cap API, I'm
 // looking at you. There is a limited number of arguments needed and
 // the caller should use 0 for those not needed.
-//go:nosplit
 func (sc *syscaller) prctlrcall6(prVal, v1, v2, v3, v4, v5 uintptr) (int, error) {
 	r, _, err := sc.r6(syscall.SYS_PRCTL, prVal, v1, v2, v3, v4, v5)
 	if err != 0 {
@@ -161,7 +158,6 @@ func (sc *syscaller) prctlrcall6(prVal, v1, v2, v3, v4, v5 uintptr) (int, error)
 // write/modify kernel state. Where available, these will use the
 // POSIX semantics fixup system calls. There is a limited number of
 // arguments needed and the caller should use 0 for those not needed.
-//go:nosplit
 func (sc *syscaller) prctlwcall(prVal, v1, v2 uintptr) (int, error) {
 	r, _, err := sc.w3(syscall.SYS_PRCTL, prVal, v1, v2)
 	if err != 0 {
@@ -175,7 +171,6 @@ func (sc *syscaller) prctlwcall(prVal, v1, v2 uintptr) (int, error) {
 // API, I'm looking at you. (Where available, these will use the POSIX
 // semantics fixup system calls). There is a limited number of
 // arguments needed and the caller should use 0 for those not needed.
-//go:nosplit
 func (sc *syscaller) prctlwcall6(prVal, v1, v2, v3, v4, v5 uintptr) (int, error) {
 	r, _, err := sc.w6(syscall.SYS_PRCTL, prVal, v1, v2, v3, v4, v5)
 	if err != 0 {
@@ -186,7 +181,6 @@ func (sc *syscaller) prctlwcall6(prVal, v1, v2, v3, v4, v5 uintptr) (int, error)
 
 // cInit perfoms the lazy identification of the capability vintage of
 // the running system.
-//go:nosplit
 func (sc *syscaller) cInit() {
 	h := &header{
 		magic: kv3,
@@ -267,7 +261,6 @@ func GetProc() *Set {
 	return c
 }
 
-//go:nosplit
 func (sc *syscaller) setProc(c *Set) error {
 	if c == nil || len(c.flat) == 0 {
 		return ErrBadSet
@@ -286,25 +279,25 @@ func (c *Set) SetProc() error {
 
 // defines from uapi/linux/prctl.h
 const (
-	pr_CAPBSET_READ = 23
-	pr_CAPBSET_DROP = 24
+	prCapBSetRead = 23
+	prCapBSetDrop = 24
 )
 
 // GetBound determines if a specific capability is currently part of
 // the local bounding set. On systems where the bounding set Value is
 // not present, this function returns an error.
 func GetBound(val Value) (bool, error) {
-	v, err := multisc.prctlrcall(pr_CAPBSET_READ, uintptr(val), 0)
+	v, err := multisc.prctlrcall(prCapBSetRead, uintptr(val), 0)
 	if err != nil {
 		return false, err
 	}
 	return v > 0, nil
 }
 
-//go:nosplit
+//go:uintptrescapes
 func (sc *syscaller) dropBound(val ...Value) error {
 	for _, v := range val {
-		if _, err := sc.prctlwcall(pr_CAPBSET_DROP, uintptr(v), 0); err != nil {
+		if _, err := sc.prctlwcall(prCapBSetDrop, uintptr(v), 0); err != nil {
 			return err
 		}
 	}
@@ -328,30 +321,30 @@ func DropBound(val ...Value) error {
 
 // defines from uapi/linux/prctl.h
 const (
-	pr_CAP_AMBIENT = 47
+	prCapAmbient = 47
 
-	pr_CAP_AMBIENT_IS_SET    = 1
-	pr_CAP_AMBIENT_RAISE     = 2
-	pr_CAP_AMBIENT_LOWER     = 3
-	pr_CAP_AMBIENT_CLEAR_ALL = 4
+	prCapAmbientIsSet    = 1
+	prCapAmbientRaise    = 2
+	prCapAmbientLower    = 3
+	prCapAmbientClearAll = 4
 )
 
 // GetAmbient determines if a specific capability is currently part of
 // the local ambient set. On systems where the ambient set Value is
 // not present, this function returns an error.
 func GetAmbient(val Value) (bool, error) {
-	r, err := multisc.prctlrcall6(pr_CAP_AMBIENT, pr_CAP_AMBIENT_IS_SET, uintptr(val), 0, 0, 0)
+	r, err := multisc.prctlrcall6(prCapAmbient, prCapAmbientIsSet, uintptr(val), 0, 0, 0)
 	return r > 0, err
 }
 
-//go:nosplit
+//go:uintptrescapes
 func (sc *syscaller) setAmbient(enable bool, val ...Value) error {
-	dir := uintptr(pr_CAP_AMBIENT_LOWER)
+	dir := uintptr(prCapAmbientLower)
 	if enable {
-		dir = pr_CAP_AMBIENT_RAISE
+		dir = prCapAmbientRaise
 	}
 	for _, v := range val {
-		_, err := sc.prctlwcall6(pr_CAP_AMBIENT, dir, uintptr(v), 0, 0, 0)
+		_, err := sc.prctlwcall6(prCapAmbient, dir, uintptr(v), 0, 0, 0)
 		if err != nil {
 			return err
 		}
@@ -370,7 +363,6 @@ func SetAmbient(enable bool, val ...Value) error {
 	return multisc.setAmbient(enable, val...)
 }
 
-//go:nosplit
 func (sc *syscaller) resetAmbient() error {
 	var v bool
 	var err error
@@ -381,7 +373,7 @@ func (sc *syscaller) resetAmbient() error {
 			return nil
 		}
 	}
-	_, err = sc.prctlwcall6(pr_CAP_AMBIENT, pr_CAP_AMBIENT_CLEAR_ALL, 0, 0, 0, 0)
+	_, err = sc.prctlwcall6(prCapAmbient, prCapAmbientClearAll, 0, 0, 0, 0)
 	return err
 }
 
