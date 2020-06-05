@@ -31,7 +31,7 @@ const (
 	Bound
 )
 
-// IABInit() returns an empty IAB.
+// IABInit returns an empty IAB.
 func IABInit() *IAB {
 	startUp.Do(multisc.cInit)
 	return &IAB{
@@ -126,7 +126,6 @@ func (iab *IAB) String() string {
 	return strings.Join(vs, ",")
 }
 
-//go:nosplit
 func (sc *syscaller) iabSetProc(iab *IAB) (err error) {
 	temp := GetProc()
 	var raising uint32
