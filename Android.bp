@@ -1,9 +1,11 @@
 cc_defaults {
     name: "libcap_defaults",
     cflags: [
+        "-Wno-pointer-arith",
+        "-Wno-tautological-compare",
         "-Wno-unused-parameter",
         "-Wno-unused-result",
-        "-Wno-tautological-compare",
+        "-Wno-unused-variable",
     ],
 }
 
