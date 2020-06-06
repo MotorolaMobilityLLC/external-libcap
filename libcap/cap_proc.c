@@ -10,7 +10,6 @@
 #include <fcntl.h>              /* Obtain O_* constant definitions */
 #include <grp.h>
 #include <sys/prctl.h>
-#include <sys/psx_syscall.h>
 #include <sys/securebits.h>
 #include <sys/syscall.h>
 #include <unistd.h>
@@ -82,13 +81,24 @@ static int _libcap_overrode_syscalls = 1;
  * no-op. However, if libpsx is linked, the one present in that
  * library (not being weak) will replace this one and the
  * _libcap_overrode_syscalls value isn't forced to zero.
+ *
+ * Note: we hardcode the prototype for the psx_load_syscalls()
+ * function here so the compiler isn't worried. If we force the build
+ * to include the header, we are close to requiring the optional
+ * libpsx to be linked.
  */
-__attribute__((weak))
 void psx_load_syscalls(long int (**syscall_fn)(long int,
 					      long int, long int, long int),
 		       long int (**syscall6_fn)(long int,
-					       long int, long int, long int,
-					       long int, long int, long int))
+						long int, long int, long int,
+						long int, long int, long int));
+
+__attribute__((weak))
+void psx_load_syscalls(long int (**syscall_fn)(long int,
+					       long int, long int, long int),
+		       long int (**syscall6_fn)(long int,
+						long int, long int, long int,
+						long int, long int, long int))
 {
     _libcap_overrode_syscalls = 0;
 }
@@ -775,10 +785,14 @@ void cap_launcher_set_mode(cap_launch_t attr, cap_mode_t flavor)
     attr->change_mode = 1;
 }
 
-cap_iab_t cap_launcher_set_iab(cap_launch_t attr, cap_iab_t bits)
+/*
+ * cap_launcher_set_iab primes the launcher to attempt to change the iab bits of
+ * the launched child.
+ */
+cap_iab_t cap_launcher_set_iab(cap_launch_t attr, cap_iab_t iab)
 {
     cap_iab_t old = attr->iab;
-    attr->iab = bits;
+    attr->iab = iab;
     return old;
 }
 
@@ -885,7 +899,7 @@ defer:
  * characteristics, to make sure they stick, or return an error
  * of -1 setting errno because the launch failed.
  */
-pid_t cap_launch(cap_launch_t details, void *data) {
+pid_t cap_launch(cap_launch_t attr, void *data) {
     int my_errno;
     int ps[2];
 
@@ -903,7 +917,7 @@ pid_t cap_launch(cap_launch_t details, void *data) {
     if (!child) {
 	close(ps[0]);
 	/* noreturn from this function: */
-	_cap_launch(ps[1], details, data);
+	_cap_launch(ps[1], attr, data);
     }
 
     /*
