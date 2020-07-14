@@ -4,7 +4,9 @@
  * This file deals with setting capabilities on files.
  */
 
+#ifndef _DEFAULT_SOURCE
 #define _DEFAULT_SOURCE
+#endif
 
 #include <sys/types.h>
 #include <byteswap.h>
@@ -24,6 +26,22 @@ extern int setxattr(const char *, const char *, const void *, size_t, int);
 extern int fsetxattr(int, const char *, const void *, size_t, int);
 extern int removexattr(const char *, const char *);
 extern int fremovexattr(int, const char *);
+
+/*
+ * This public API was moved to include/uapi/linux/xattr.h . For just
+ * these definitions, it isn't really worth managing this in our build
+ * system with yet another copy of a header file. We just, provide
+ * fallback definitions here.
+ */
+#ifndef XATTR_CAPS_SUFFIX
+#define XATTR_CAPS_SUFFIX "capability"
+#endif
+#ifndef XATTR_SECURITY_PREFIX
+#define XATTR_SECURITY_PREFIX "security."
+#endif
+#ifndef XATTR_NAME_CAPS
+#define XATTR_NAME_CAPS XATTR_SECURITY_PREFIX XATTR_CAPS_SUFFIX
+#endif
 
 #include "libcap.h"
 
@@ -360,7 +378,7 @@ int cap_set_file(const char *filename, cap_t cap_d)
     return -1;
 }
 
-void cap_set_nsowner(cap_t cap_d, uid_t rootid)
+int cap_set_nsowner(cap_t cap_d, uid_t rootid)
 {
 	errno = EINVAL;
 	return -1;
