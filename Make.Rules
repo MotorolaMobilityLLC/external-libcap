@@ -38,11 +38,16 @@ LIBDIR=$(lib_prefix)/$(lib)
 PKGCONFIGDIR=$(LIBDIR)/pkgconfig
 GOPKGDIR=$(prefix)/share/gocode/src
 
-# common defines for libcap
+# Common version number defines for libcap
 LIBTITLE=libcap
 VERSION=2
-MINOR=36
-#
+MINOR=39
+
+# Go modules have their own semantics. I plan to leave this value at 0
+# and keep it there. The Go packages should always remain backwardly
+# compatible, but I may have to up it if Go's syntax changes in a
+# backwards incompatible manner. (Let's hope not.)
+GOMAJOR=0
 
 # Compilation specifics
 
@@ -76,15 +81,20 @@ PAM_CAP := $(shell if [ -f /usr/include/security/pam_modules.h ]; then echo yes 
 INDENT := $(shell if [ -n "$$(which indent 2>/dev/null)" ]; then echo "| indent -kr" ; fi)
 DYNAMIC := $(shell if [ ! -d "$(topdir)/.git" ]; then echo yes; fi)
 
-GOLANG := $(shell if [ -n "$(shell go version 2>/dev/null)" ]; then echo yes ; else echo no ; fi)
+GO := go
+GOLANG := $(shell if [ -n "$(shell $(GO) version 2>/dev/null)" ]; then echo yes ; else echo no ; fi)
 ifeq ($(GOLANG),yes)
-GOROOT := $(shell go env GOROOT)
-GOCGO := $(shell if [ "$(shell go env CGO_ENABLED)" = 1 ]; then echo yes ; else echo no ; fi)
-GOOSARCH := $(shell go env GOHOSTOS)_$(shell go env GOHOSTARCH)
+GOROOT := $(shell $(GO) env GOROOT)
+GOCGO := $(shell if [ "$(shell $(GO) env CGO_ENABLED)" = 1 ]; then echo yes ; else echo no ; fi)
+GOOSARCH := $(shell $(GO) env GOHOSTOS)_$(shell $(GO) env GOHOSTARCH)
 CGO_CFLAGS := -I$(topdir)/libcap/include
 CGO_LDFLAGS := -L$(topdir)/libcap
-CGO_LDFLAGS_ALLOW := -Wl,-wrap,.+
+CGO_LDFLAGS_ALLOW := -Wl,-?-wrap[=,][^-.@][^,]*
 CGO_REQUIRED=$(shell $(topdir)/go/cgo-required.sh)
+ifeq ($(CGO_REQUIRED),0)
+# Hopefully this will not be needed at some point.
+GOBUILDTAG=-tags allthreadssyscall
+endif
 endif
 
 # If you want capsh to launch with something other than /bin/bash
