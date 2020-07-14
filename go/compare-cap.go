@@ -8,7 +8,7 @@ import (
 	"syscall"
 	"unsafe"
 
-	"libcap/cap"
+	"kernel.org/pub/linux/libs/security/libcap/cap"
 )
 
 // #include <stdlib.h>

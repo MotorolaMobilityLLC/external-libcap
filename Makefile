@@ -15,6 +15,7 @@ ifneq ($(PAM_CAP),no)
 endif
 ifeq ($(GOLANG),yes)
 	$(MAKE) -C go $@
+	rm -f cap/go.sum
 endif
 	$(MAKE) -C tests $@
 	$(MAKE) -C progs $@
@@ -30,6 +31,8 @@ clean-here:
 
 distclean: clean
 	$(DISTCLEAN)
+	@echo "CONFIRM Go package cap has right version dependency on psx:"
+	grep -F "require kernel.org/pub/linux/libs/security/libcap/psx v$(GOMAJOR).$(VERSION).$(MINOR)" cap/go.mod
 
 release: distclean
 	cd .. && ln -s libcap libcap-$(VERSION).$(MINOR) && tar cvf libcap-$(VERSION).$(MINOR).tar --exclude patches libcap-$(VERSION).$(MINOR)/* && rm libcap-$(VERSION).$(MINOR)
@@ -57,11 +60,18 @@ endif
 
 distcheck:
 	./distcheck.sh
+	make CC=/usr/local/musl/bin/musl-gcc clean all test sudotest
+	make clean all test sudotest
+	make distclean
 
-morganrelease: distclean distcheck
-	@echo "sign the tag twice: older DSA key; and newer RSA kernel.org key"
+morganrelease: distcheck
+	@echo "sign the main library tag twice: older DSA key; and newer RSA (kernel.org) key"
 	git tag -u D41A6DF2 -s libcap-$(VERSION).$(MINOR) -m "This is libcap-$(VERSION).$(MINOR)"
 	git tag -u E2CCF3F4 -s libcap-korg-$(VERSION).$(MINOR) -m "This is libcap-$(VERSION).$(MINOR)"
+	@echo "The following are for the Go module tracking."
+	git tag -u D41A6DF2 -s v$(GOMAJOR).$(VERSION).$(MINOR) -m "This is the version tag for the 'libcap' Go base directory associated with libcap-$(VERSION).$(MINOR)."
+	git tag -u D41A6DF2 -s psx/v$(GOMAJOR).$(VERSION).$(MINOR) -m "This is the version tag for the 'psx' Go package associated with libcap-$(VERSION).$(MINOR)."
+	git tag -u D41A6DF2 -s cap/v$(GOMAJOR).$(VERSION).$(MINOR) -m "This is the version tag for the 'cap' Go package associated with libcap-$(VERSION).$(MINOR)."
 	make release
 	@echo "sign the tar file using korg key"
 	cd .. && gpg -sba -u E2CCF3F4 libcap-$(VERSION).$(MINOR).tar

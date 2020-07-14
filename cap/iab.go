@@ -20,10 +20,10 @@ type IAB struct {
 
 // Vector enumerates which of the inheritable IAB capability vectors
 // is being manipulated.
-type Vector int
+type Vector uint
 
-// Inh, Amb, Bound enumerate the IAB vector components. IMB.Inh is
-// equivalent Set.Inheritable but they are named differently for
+// Inh, Amb, Bound enumerate the IAB vector components. (Vector) Inh
+// is equivalent to (Flag) Inheritable. They are named differently for
 // syntax/type checking reasons.
 const (
 	Inh Vector = iota
@@ -173,7 +173,10 @@ func (sc *syscaller) iabSetProc(iab *IAB) (err error) {
 }
 
 // SetProc attempts to change the Inheritable, Ambient and Bounding
-// capabilty vectors of the current process.
+// capabilty vectors of the current process. The Bounding vector strongly
+// affects the potential for setting other bits, so this function
+// carefully performs the the combined operation in the most flexible
+// order.
 func (iab *IAB) SetProc() error {
 	scwMu.Lock()
 	defer scwMu.Unlock()
@@ -199,7 +202,7 @@ func (iab *IAB) GetVector(vec Vector, val Value) (bool, error) {
 	}
 }
 
-// SetVector sets all of the values in the specified vector to the
+// SetVector sets all of the vals in the specified vector to the
 // raised value.  Note, the A vector cannot contain values not raised
 // in the I vector, so setting values directly in one vector may have
 // the side effect of mirroring the value in the other vector to

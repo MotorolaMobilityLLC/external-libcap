@@ -1,17 +1,39 @@
-// Package cap is the Linux capabilities user space API (libcap)
+// Package cap provides the Linux Capabilities userspace library API
 // bindings in native Go.
 //
-// For cgo linked binaries, package "libcap/psx" is used to broker the
-// POSIX semantics system calls that manipulate process state.
+// Capabilities are a feature of the Linux kernel that allow fine
+// grain permissions to perform privileged operations. Privileged
+// operations are required to do irregular system level operations
+// from code. You can read more about how Capabilities are intended to
+// work here:
 //
-// If the Go runtime syscall interface contains the
-// syscall.AllThreadsSyscall() API then this package will use that to
-// invoke capability setting system calls for pure Go binaries. To
-// force this behavior use the CGO_ENABLED=0 environment variable.
+//   https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/33528.pdf
 //
-// If syscall.AllThreadsSyscall() is not present, the "libcap/cap"
-// package will failover to using "libcap/psx".
-package cap
+// This package supports native Go bindings for all the features
+// described in that paper as well as supporting subsequent changes to
+// the kernel for other styles of inheritable Capability.
+//
+// See https://sites.google.com/site/fullycapable/ for recent updates,
+// some walk-through examples of ways of using 'cap.Set's etc and
+// information on how to file bugs.
+//
+// For CGo linked binaries, behind the scenes, the package
+// "kernel.org/pub/linux/libs/security/libcap/psx" is used to perform
+// POSIX semantics system calls that manipulate thread state
+// uniformly over the whole Go (and CGo linked) process runtime.
+//
+// Note, if the Go runtime syscall interface contains the linux
+// variant syscall.AllThreadsSyscall() API (it is not in go1.15beta1
+// for example, but see https://github.com/golang/go/issues/1435 for
+// current status) then this present package can use that to invoke
+// Capability setting system calls for pure Go binaries. In such an
+// enhanced Go runtime, to force this behavior, use the CGO_ENABLED=0
+// environment variable and, for now, a build tag:
+//
+//   CGO_ENABLED=0 go build -tags allthreadssyscall ...
+//
+// Copyright (c) 2019,20 Andrew G. Morgan <morgan@kernel.org>
+package cap // import "kernel.org/pub/linux/libs/security/libcap/cap"
 
 import (
 	"errors"
@@ -24,10 +46,13 @@ import (
 // Value is the type of a single capability (or permission) bit.
 type Value uint
 
-// Flag is the type of one of the three Value vectors held in a Set.
+// Flag is the type of one of the three Value dimensions held in a Set.
+// It is also used in the API for changing the Bounding and Ambient Vectors.
+// For these, in addition to direct manipulation of these vectors see the
+// package supports an IAB abstraction.
 type Flag uint
 
-// Effective, Permitted, Inheritable are the three vectors of Values
+// Effective, Permitted, Inheritable are the three dimensions of Values
 // held in a Set.
 const (
 	Effective Flag = iota
@@ -69,7 +94,7 @@ var (
 	magic uint32
 
 	// words holds the number of uint32's associated with each
-	// capability vector for this session.
+	// capability dimension for this session.
 	words int
 
 	// maxValues holds the number of bit values that are named by
@@ -268,9 +293,10 @@ func (sc *syscaller) setProc(c *Set) error {
 	return sc.capwcall(syscall.SYS_CAPSET, &header{magic: magic}, c.flat)
 }
 
-// SetProc attempts to write the capability Set to the current
+// SetProc attempts to set the capability Set of the current
 // process. The kernel will perform permission checks and an error
-// will be returned if the attempt fails.
+// will be returned if the attempt fails. Should the attempt fail
+// no process capabilities will have been modified.
 func (c *Set) SetProc() error {
 	scwMu.Lock()
 	defer scwMu.Unlock()
@@ -308,11 +334,11 @@ func (sc *syscaller) dropBound(val ...Value) error {
 // never allow a bounding set Value bit to be raised once successfully
 // dropped. However, dropping requires the current process is
 // sufficiently capable (usually via cap.SETPCAP being raised in the
-// Effective flag vector). Note, the drops are performed in order and
-// if one bounding value cannot be dropped, the function returns
-// immediately with an error which may leave the system in an
+// Effective flag of the process' Set). Note, the drops are performed
+// in order and if one bounding value cannot be dropped, the function
+// returns immediately with an error which may leave the system in an
 // ill-defined state. The caller can determine where things went wrong
-// from on error using GetBound().
+// using GetBound().
 func DropBound(val ...Value) error {
 	scwMu.Lock()
 	defer scwMu.Unlock()
@@ -379,8 +405,11 @@ func (sc *syscaller) resetAmbient() error {
 
 // ResetAmbient attempts to ensure the Ambient set is fully
 // cleared. It works by first reading the set and if it finds any bits
-// raised it will attempt a reset. This is a workaround for situations
-// where the Ambient API is locked.
+// raised it will attempt a reset. The test before attempting a reset
+// behavior is a workaround for situations where the Ambient API is
+// locked, but a reset is not actually needed. No Ambient bit not already
+// raised in both the Permitted and Inheritable Set is allowed by the
+// kernel.
 func ResetAmbient() error {
 	scwMu.Lock()
 	defer scwMu.Unlock()
