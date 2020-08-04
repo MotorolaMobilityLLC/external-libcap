@@ -5,11 +5,11 @@ third_party {
     type: GIT
     value: "https://git.kernel.org/pub/scm/linux/kernel/git/morgan/libcap.git"
   }
-  version: "libcap-2.39"
+  version: "libcap-2.42"
   license_type: NOTICE
   last_upgrade_date {
     year: 2020
-    month: 7
-    day: 13
+    month: 8
+    day: 3
   }
 }
