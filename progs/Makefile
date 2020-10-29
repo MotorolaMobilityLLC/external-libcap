@@ -8,16 +8,20 @@ PROGS=getpcaps capsh getcap setcap
 
 BUILD=$(PROGS)
 
-ifneq ($(DYNAMIC),yes)
+ifeq ($(DYNAMIC),yes)
+LDPATH = LD_LIBRARY_PATH=../libcap
+DEPSBUILD = all
+else
 LDFLAGS += --static
+DEPSBUILD = libcap.a
 endif
 
-DEPS=../libcap/libcap.a ../libcap/libpsx.a
+DEPS=../libcap/libcap.a
 
 all: $(BUILD)
 
 $(DEPS):
-	make -C ../libcap all
+	make -C ../libcap $(DEPSBUILD)
 
 $(BUILD): %: %.o $(DEPS)
 	$(CC) $(CFLAGS) -o $@ $< $(LIBCAPLIB) $(LDFLAGS)
@@ -36,9 +40,12 @@ endif
 
 test: $(PROGS)
 
-sudotest: test
-	sudo ./quicktest.sh
+tcapsh-static: capsh.c $(DEPS)
+	$(CC) $(IPATH) $(CAPSH_SHELL) $(CFLAGS) -o $@ $< $(LIBCAPLIB) $(LDFLAGS) --static
+
+sudotest: test tcapsh-static
+	sudo $(LDPATH) ./quicktest.sh
 
 clean:
 	$(LOCALCLEAN)
-	rm -f *.o $(BUILD) tcapsh ping hack.sh compare-cap
+	rm -f *.o $(BUILD) tcapsh* privileged ping hack.sh compare-cap
