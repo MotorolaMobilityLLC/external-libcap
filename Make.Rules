@@ -1,3 +1,8 @@
+# Common version number defines for libcap
+LIBTITLE=libcap
+VERSION=2
+MINOR=44
+
 #
 ## Optional prefixes:
 #
@@ -38,11 +43,6 @@ LIBDIR=$(lib_prefix)/$(lib)
 PKGCONFIGDIR=$(LIBDIR)/pkgconfig
 GOPKGDIR=$(prefix)/share/gocode/src
 
-# Common version number defines for libcap
-LIBTITLE=libcap
-VERSION=2
-MINOR=42
-
 # Go modules have their own semantics. I plan to leave this value at 0
 # and keep it there. The Go packages should always remain backwardly
 # compatible, but I may have to up it if Go's syntax changes in a
@@ -54,13 +54,15 @@ GOMAJOR=0
 KERNEL_HEADERS := $(topdir)/libcap/include/uapi
 IPATH += -fPIC -I$(KERNEL_HEADERS) -I$(topdir)/libcap/include
 
-CC ?= $(CROSS_COMPILE)gcc
+CC := $(CROSS_COMPILE)gcc
 DEFINES := -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64
-CFLAGS ?= -O2 $(DEFINES)
+COPTS ?= -O2
+CFLAGS ?= $(COPTS) $(DEFINES)
 BUILD_CC ?= $(CC)
-BUILD_CFLAGS ?= -O2 $(DEFINES) $(IPATH)
-AR ?= $(CROSS_COMPILE)ar
-RANLIB ?= $(CROSS_COMPILE)ranlib
+BUILD_COPTS ?= -O2
+BUILD_CFLAGS ?= $(BUILD_COPTS) $(DEFINES) $(IPATH)
+AR := $(CROSS_COMPILE)ar
+RANLIB := $(CROSS_COMPILE)ranlib
 DEBUG = -g #-DDEBUG
 WARNINGS=-Wall -Wwrite-strings \
         -Wpointer-arith -Wcast-qual -Wcast-align \
@@ -69,7 +71,7 @@ WARNINGS=-Wall -Wwrite-strings \
 LD=$(CC) -Wl,-x -shared
 LDFLAGS ?= #-g
 LIBCAPLIB := -L$(topdir)/libcap -lcap
-LIBPSXLIB := -L$(topdir)/libcap -lpsx -lpthread
+LIBPSXLIB := -L$(topdir)/libcap -lpsx -lpthread -Wl,-wrap,pthread_create
 
 BUILD_GPERF := $(shell which gperf >/dev/null 2>/dev/null && echo yes)
 
