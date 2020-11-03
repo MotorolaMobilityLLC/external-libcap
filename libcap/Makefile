@@ -6,25 +6,41 @@ include ../Make.Rules
 #
 # Library version
 #
-LIBNAME=$(LIBTITLE).so
+CAPLIBNAME=$(LIBTITLE).so
 STACAPLIBNAME=$(LIBTITLE).a
 #
+PSXLIBNAME=libpsx.so
 STAPSXLIBNAME=libpsx.a
 
 CAPFILES=cap_alloc cap_proc cap_extint cap_flag cap_text cap_file
 PSXFILES=../psx/psx
 
 INCLS=libcap.h cap_names.h $(INCS)
-CAPOBJS=$(addsuffix .o, $(CAPFILES))
-PSXOBJS=$(addsuffix .o, $(PSXFILES))
-
-MAJLIBNAME=$(LIBNAME).$(VERSION)
-MINLIBNAME=$(MAJLIBNAME).$(MINOR)
 GPERF_OUTPUT = _caps_output.gperf
 
-all: $(MINLIBNAME) $(STACAPLIBNAME) pcs $(STAPSXLIBNAME)
+CAPOBJS=$(addsuffix .o, $(CAPFILES))
+MAJCAPLIBNAME=$(CAPLIBNAME).$(VERSION)
+MINCAPLIBNAME=$(MAJCAPLIBNAME).$(MINOR)
 
-pcs: libcap.pc libpsx.pc
+PSXOBJS=$(addsuffix .o, $(PSXFILES))
+MAJPSXLIBNAME=$(PSXLIBNAME).$(VERSION)
+MINPSXLIBNAME=$(MAJPSXLIBNAME).$(MINOR)
+
+all: pcs $(STACAPLIBNAME)
+ifeq ($(SHARED),yes)
+	make $(CAPLIBNAME)
+endif
+ifeq ($(PTHREADS),yes)
+	make $(STAPSXLIBNAME)
+ifeq ($(SHARED),yes)
+	make $(PSXLIBNAME)
+endif
+endif
+
+pcs: libcap.pc
+ifeq ($(PTHREADS),yes)
+	make libpsx.pc
+endif
 
 ifeq ($(BUILD_GPERF),yes)
 USE_GPERF_OUTPUT = $(GPERF_OUTPUT)
@@ -76,10 +92,17 @@ $(STAPSXLIBNAME): $(PSXOBJS)
 	$(AR) rcs $@ $^
 	$(RANLIB) $@
 
-$(MINLIBNAME): $(CAPOBJS)
-	$(LD) $(CFLAGS) $(LDFLAGS) -Wl,-soname,$(MAJLIBNAME) -o $@ $^
-	ln -sf $(MINLIBNAME) $(MAJLIBNAME)
-	ln -sf $(MAJLIBNAME) $(LIBNAME)
+ifeq ($(SHARED),yes)
+$(CAPLIBNAME) $(MAJCAPLIBNAME) $(MINCAPLIBNAME): $(CAPOBJS)
+	$(LD) $(CFLAGS) $(LDFLAGS) -Wl,-soname,$(MAJCAPLIBNAME) -o $(MINCAPLIBNAME) $^
+	ln -sf $(MINCAPLIBNAME) $(MAJCAPLIBNAME)
+	ln -sf $(MAJCAPLIBNAME) $(CAPLIBNAME)
+
+$(PSXLIBNAME) $(MAJPSXLIBNAME) $(MINPSXLIBNAME): $(PSXOBJS)
+	$(LD) $(CFLAGS) $(LDFLAGS) -Wl,-soname,$(MAJPSXLIBNAME) -o $(MINPSXLIBNAME) $^ $(PSXLINKFLAGS)
+	ln -sf $(MINPSXLIBNAME) $(MAJPSXLIBNAME)
+	ln -sf $(MAJPSXLIBNAME) $(PSXLIBNAME)
+endif
 
 %.o: %.c $(INCLS)
 	$(CC) $(CFLAGS) $(IPATH) -c $< -o $@
@@ -93,29 +116,52 @@ cap_test: cap_test.c libcap.h
 test: cap_test
 	./cap_test
 
-install: install-static install-shared
+install: install-static
+ifeq ($(SHARED),yes)
+	make install-shared
+endif
 
-install-static: install-static-cap install-static-psx
+install-static: install-static-cap
+ifeq ($(PTHREADS),yes)
+	make install-static-psx
+endif
 
 install-shared: install-shared-cap
+ifeq ($(PTHREADS),yes)
+	make install-shared-psx
+endif
 
-install-cap: install-static-cap install-shared-cap
+install-cap: install-static-cap
+ifeq ($(SHARED),yes)
+	make install-shared-cap
+endif
 
 install-psx: install-static-psx
+ifeq ($(SHARED),yes)
+	make install-shared-psx
+endif
 
 install-static-cap: install-common-cap $(STACAPLIBNAME)
 	install -m 0644 $(STACAPLIBNAME) $(FAKEROOT)$(LIBDIR)/$(STACAPLIBNAME)
 
-install-shared-cap: install-common-cap $(MINLIBNAME)
-	install -m 0644 $(MINLIBNAME) $(FAKEROOT)$(LIBDIR)/$(MINLIBNAME)
-	ln -sf $(MINLIBNAME) $(FAKEROOT)$(LIBDIR)/$(MAJLIBNAME)
-	ln -sf $(MAJLIBNAME) $(FAKEROOT)$(LIBDIR)/$(LIBNAME)
+install-shared-cap: install-common-cap $(MINCAPLIBNAME)
+	install -m 0644 $(MINCAPLIBNAME) $(FAKEROOT)$(LIBDIR)/$(MINCAPLIBNAME)
+	ln -sf $(MINCAPLIBNAME) $(FAKEROOT)$(LIBDIR)/$(MAJCAPLIBNAME)
+	ln -sf $(MAJCAPLIBNAME) $(FAKEROOT)$(LIBDIR)/$(CAPLIBNAME)
 ifeq ($(FAKEROOT),)
 	-/sbin/ldconfig
 endif
 
 install-static-psx: install-common-psx $(STAPSXLIBNAME)
 	install -m 0644 $(STAPSXLIBNAME) $(FAKEROOT)$(LIBDIR)/$(STAPSXLIBNAME)
+
+install-shared-psx: install-common-psx $(MINPSXLIBNAME)
+	install -m 0644 $(MINPSXLIBNAME) $(FAKEROOT)$(LIBDIR)/$(MINPSXLIBNAME)
+	ln -sf $(MINPSXLIBNAME) $(FAKEROOT)$(LIBDIR)/$(MAJPSXLIBNAME)
+	ln -sf $(MAJPSXLIBNAME) $(FAKEROOT)$(LIBDIR)/$(PSXLIBNAME)
+ifeq ($(FAKEROOT),)
+	-/sbin/ldconfig
+endif
 
 install-common-cap: install-common libcap.pc
 	install -m 0644 include/sys/capability.h $(FAKEROOT)$(INCDIR)/sys
@@ -132,7 +178,7 @@ install-common:
 
 clean:
 	$(LOCALCLEAN)
-	rm -f $(CAPOBJS) $(LIBNAME)* $(STACAPLIBNAME) libcap.pc libpsx.pc
-	rm -f $(PSXOBJS) $(STAPSXLIBNAME)
+	rm -f $(CAPOBJS) $(CAPLIBNAME)* $(STACAPLIBNAME) libcap.pc
+	rm -f $(PSXOBJS) $(PSXLIBNAME)* $(STAPSXLIBNAME) libpsx.pc
 	rm -f cap_names.h cap_names.list.h _makenames $(GPERF_OUTPUT) cap_test
 	cd include/sys && $(LOCALCLEAN)
