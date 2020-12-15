@@ -48,6 +48,7 @@ cc_library {
         "//apex_available:platform",
         "com.android.adbd",
         "com.android.media.swcodec",
+        "com.android.virt",
     ],
     min_sdk_version: "29",
 }
