@@ -43,30 +43,15 @@ extern "C" {
  * and psx_syscall6().
  */
 #define psx_syscall(syscall_nr, ...) \
-    __psx_syscall(syscall_nr, __VA_ARGS__, 6, 5, 4, 3, 2, 1, 0)
+    __psx_syscall(syscall_nr, __VA_ARGS__, (long int) 6, (long int) 5, \
+		  (long int) 4, (long int) 3, (long int) 2, \
+		  (long int) 1, (long int) 0)
 long int __psx_syscall(long int syscall_nr, ...);
 long int psx_syscall3(long int syscall_nr,
 		      long int arg1, long int arg2, long int arg3);
 long int psx_syscall6(long int syscall_nr,
 		      long int arg1, long int arg2, long int arg3,
 		      long int arg4, long int arg5, long int arg6);
-
-/*
- * psx_pthread_create() wraps the -lpthread pthread_create() function
- * call and registers the generated thread with the psx_syscall
- * infrastructure.
- *
- * Note, to transparently redirect all the pthread_create() calls in
- * your binary to psx_pthread_create(), link with:
- *
- *   gcc ... -lpsx -lpthread -Wl,-wrap,pthread_create
- *
- * [That is, libpsx contains an internal definition for the
- * __wrap_pthread_create function to invoke psx_pthread_create
- * functionality instead.]
- */
-int psx_pthread_create(pthread_t *thread, const pthread_attr_t *attr,
-		       void *(*start_routine) (void *), void *arg);
 
 /*
  * This function should be used by systems to obtain pointers to the
