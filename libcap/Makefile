@@ -28,18 +28,18 @@ MINPSXLIBNAME=$(MAJPSXLIBNAME).$(MINOR)
 
 all: pcs $(STACAPLIBNAME)
 ifeq ($(SHARED),yes)
-	make $(CAPLIBNAME)
+	$(MAKE) $(CAPLIBNAME)
 endif
 ifeq ($(PTHREADS),yes)
-	make $(STAPSXLIBNAME)
+	$(MAKE) $(STAPSXLIBNAME)
 ifeq ($(SHARED),yes)
-	make $(PSXLIBNAME)
+	$(MAKE) $(PSXLIBNAME)
 endif
 endif
 
 pcs: libcap.pc
 ifeq ($(PTHREADS),yes)
-	make libpsx.pc
+	$(MAKE) libpsx.pc
 endif
 
 ifeq ($(BUILD_GPERF),yes)
@@ -88,8 +88,8 @@ $(STACAPLIBNAME): $(CAPOBJS)
 	$(AR) rcs $@ $^
 	$(RANLIB) $@
 
-$(STAPSXLIBNAME): $(PSXOBJS)
-	$(AR) rcs $@ $^
+$(STAPSXLIBNAME): $(PSXOBJS) include/sys/psx_syscall.h
+	$(AR) rcs $@ $(PSXOBJS)
 	$(RANLIB) $@
 
 ifeq ($(SHARED),yes)
@@ -98,8 +98,8 @@ $(CAPLIBNAME) $(MAJCAPLIBNAME) $(MINCAPLIBNAME): $(CAPOBJS)
 	ln -sf $(MINCAPLIBNAME) $(MAJCAPLIBNAME)
 	ln -sf $(MAJCAPLIBNAME) $(CAPLIBNAME)
 
-$(PSXLIBNAME) $(MAJPSXLIBNAME) $(MINPSXLIBNAME): $(PSXOBJS)
-	$(LD) $(CFLAGS) $(LDFLAGS) -Wl,-soname,$(MAJPSXLIBNAME) -o $(MINPSXLIBNAME) $^ $(PSXLINKFLAGS)
+$(PSXLIBNAME) $(MAJPSXLIBNAME) $(MINPSXLIBNAME): $(PSXOBJS) include/sys/psx_syscall.h
+	$(LD) $(CFLAGS) $(LDFLAGS) -Wl,-soname,$(MAJPSXLIBNAME) -o $(MINPSXLIBNAME) $(PSXOBJS) $(PSXLINKFLAGS)
 	ln -sf $(MINPSXLIBNAME) $(MAJPSXLIBNAME)
 	ln -sf $(MAJPSXLIBNAME) $(PSXLIBNAME)
 endif
@@ -118,27 +118,27 @@ test: cap_test
 
 install: install-static
 ifeq ($(SHARED),yes)
-	make install-shared
+	$(MAKE) install-shared
 endif
 
 install-static: install-static-cap
 ifeq ($(PTHREADS),yes)
-	make install-static-psx
+	$(MAKE) install-static-psx
 endif
 
 install-shared: install-shared-cap
 ifeq ($(PTHREADS),yes)
-	make install-shared-psx
+	$(MAKE) install-shared-psx
 endif
 
 install-cap: install-static-cap
 ifeq ($(SHARED),yes)
-	make install-shared-cap
+	$(MAKE) install-shared-cap
 endif
 
 install-psx: install-static-psx
 ifeq ($(SHARED),yes)
-	make install-shared-psx
+	$(MAKE) install-shared-psx
 endif
 
 install-static-cap: install-common-cap $(STACAPLIBNAME)
@@ -167,7 +167,11 @@ install-common-cap: install-common libcap.pc
 	install -m 0644 include/sys/capability.h $(FAKEROOT)$(INCDIR)/sys
 	install -m 0644 libcap.pc $(FAKEROOT)$(PKGCONFIGDIR)/libcap.pc
 
-install-common-psx: install-common libpsx.pc
+include/sys/psx_syscall.h: ../psx/psx_syscall.h
+	rm -f $@
+	ln -s ../../../psx/psx_syscall.h $@
+
+install-common-psx: install-common libpsx.pc include/sys/psx_syscall.h
 	install -m 0644 include/sys/psx_syscall.h $(FAKEROOT)$(INCDIR)/sys
 	install -m 0644 libpsx.pc $(FAKEROOT)$(PKGCONFIGDIR)/libpsx.pc
 
@@ -181,4 +185,5 @@ clean:
 	rm -f $(CAPOBJS) $(CAPLIBNAME)* $(STACAPLIBNAME) libcap.pc
 	rm -f $(PSXOBJS) $(PSXLIBNAME)* $(STAPSXLIBNAME) libpsx.pc
 	rm -f cap_names.h cap_names.list.h _makenames $(GPERF_OUTPUT) cap_test
+	rm -f include/sys/psx_syscall.h
 	cd include/sys && $(LOCALCLEAN)
