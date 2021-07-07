@@ -50,7 +50,6 @@ cc_library {
     host_supported: true,
     vendor_available: true,
     product_available: true,
-    ramdisk_available: true,
     recovery_available: true,
     vndk: {
         enabled: true,
